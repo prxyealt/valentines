@@ -1,1 +1,174 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Valentine's Day Button</title>\n    <style>\n        body {\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            height: 100vh;\n            background-color: #f8f9fa;\n        }\n        #noButton {\n            position: absolute;\n            background-color: #ff4d4d;\n            color: white;\n            border: none;\n            padding: 10px 20px;\n            font-size: 16px;\n            cursor: pointer;\n            transition: transform 0.1s;\n        }\n    </style>\n</head>\n<body>\n    <button id="noButton">No</button>\n    <script>\n        const noButton = document.getElementById('noButton');\n        document.addEventListener('mousemove', (event) => {\n            const buttonRect = noButton.getBoundingClientRect();\n            const buttonX = buttonRect.x + buttonRect.width / 2;\n            const buttonY = buttonRect.y + buttonRect.height / 2;\n            const distance = Math.sqrt(Math.pow(buttonX - event.clientX, 2) + Math.pow(buttonY - event.clientY, 2));\n\n            if (distance < 50) {\n                const angle = Math.atan2(buttonY - event.clientY, buttonX - event.clientX);\n                const offsetX = Math.cos(angle) * 30;\n                const offsetY = Math.sin(angle) * 30;\n                noButton.style.transform = `translate(${offsetX}px, ${offsetY}px)`;\n            } else {\n                noButton.style.transform = 'translate(0, 0)';\n            }\n        });\n    <\/script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Valentines — Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: #fff6f8; color: #222; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+    .card { background: #fff; border-radius:12px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding:28px; max-width:420px; width:90%; text-align:center; position:relative; }
+    h1 { margin:0 0 18px; font-size:20px; }
+    .zone { display:flex; gap:12px; justify-content:center; margin-top:12px; }
+    button { padding:8px 14px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-weight:600; }
+    #yesBtn { background: linear-gradient(90deg,#ff7aa2,#ff4d7a); color:#fff; border:none; }
+    .hint { color:#6b7280; margin-top:12px; }
+    .result { display:none; margin-top:14px; padding:12px; border-radius:8px; background:linear-gradient(180deg,#fffbe6,#fff3f6); }
+    #confettiCanvas { position:fixed; inset:0; pointer-events:none; z-index:9999; }
+    .gif-wrap { margin: 12px 0; }
+    .gif-wrap img { max-width:220px; width:100%; height:auto; display:block; margin:0 auto; border-radius:8px; }
+
+    /* Evasive No button styles */
+    #noBtn {
+      position: relative;
+      transition: transform 0.12s ease;
+      will-change: transform;
+      touch-action: none;
+    }
+
+    @media (max-width: 420px) {
+      #noBtn { transition: none; transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas"></canvas>
+  <main class="card" role="main" aria-live="polite">
+    <h1>my love, will you be my valentine?</h1>
+
+    <div class="gif-wrap" aria-hidden="false">
+      <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute cat with hearts" />
+    </div>
+
+    <section class="zone" id="zone">
+      <button id="yesBtn" aria-label="Yes">Yes</button>
+      <button id="noBtn" aria-label="No">No</button>
+    </section>
+
+    <div class="hint" id="hint">“No” seems a bit shy 😈</div>
+
+    <section class="result" id="result">
+      <h2>YAY! 🎉</h2>
+      <p>You're mine.</p>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const result = document.getElementById('result');
+      const hint = document.getElementById('hint');
+      const yesBtn = document.getElementById('yesBtn');
+      const noBtn = document.getElementById('noBtn');
+      const zone = document.getElementById('zone');
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+
+      let particles = [];
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function spawnConfetti() {
+        const colors = ['#ff4d7a','#ffb3c6','#ffd166','#6ee7b7','#7dd3fc'];
+        for (let i=0;i<120;i++) {
+          particles.push({
+            x: Math.random()*canvas.width,
+            y: -10 - Math.random()*canvas.height*0.2,
+            vx: (Math.random()-0.5)*4,
+            vy: 2 + Math.random()*6,
+            size: 6 + Math.random()*8,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            rot: Math.random()*Math.PI*2,
+            vr: (Math.random()-0.5)*0.2
+          });
+        }
+      }
+
+      function frame() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.06; // gravity
+          p.rot += p.vr;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+          ctx.restore();
+
+          if (p.y > canvas.height + 30) particles.splice(i,1);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+
+      yesBtn.addEventListener('click', () => {
+        zone.style.display = 'none';
+        hint.style.display = 'none';
+        result.style.display = 'block';
+        spawnConfetti();
+        setTimeout(() => { /* allow existing particles to finish */ }, 2500);
+      });
+
+      noBtn.addEventListener('click', () => {
+        hint.textContent = 'You can try again 😉';
+      });
+
+      /* Evasive No button logic */
+      const THRESHOLD = 120; // px
+      const STRENGTH = 1.5;
+      const MAX_MOVE = 220;
+
+      function isNarrow() {
+        return window.innerWidth <= 420;
+      }
+
+      function handlePointerMove(e) {
+        if (isNarrow()) return;
+        const px = e.clientX;
+        const py = e.clientY;
+        const rect = noBtn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        let dx = cx - px;
+        let dy = cy - py;
+        let dist = Math.hypot(dx, dy);
+        if (dist < 1) dist = 1;
+        if (dist < THRESHOLD) {
+          const pushAmount = (THRESHOLD - dist) * STRENGTH;
+          let nx = (dx / dist) * pushAmount;
+          let ny = (dy / dist) * pushAmount;
+          nx = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, nx));
+          ny = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, ny));
+          noBtn.style.transform = `translate(${nx}px, ${ny}px)`;
+        } else {
+          noBtn.style.transform = '';
+        }
+      }
+
+      function handlePointerLeave() { noBtn.style.transform = ''; }
+
+      zone.addEventListener('pointermove', handlePointerMove, { passive: true });
+      zone.addEventListener('pointerleave', handlePointerLeave);
+
+      zone.addEventListener('touchmove', (ev) => {
+        if (isNarrow()) return;
+        const t = ev.touches && ev.touches[0];
+        if (!t) return;
+        handlePointerMove({ clientX: t.clientX, clientY: t.clientY });
+      }, { passive: true });
+
+      noBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') noBtn.click();
+      });
+    });
+  </script>
+</body>
+</html>
