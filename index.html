@@ -17,10 +17,9 @@
     .gif-wrap { margin: 12px 0; }
     .gif-wrap img { max-width:220px; width:100%; height:auto; display:block; margin:0 auto; border-radius:8px; }
 
-    /* Evasive No button styles */
+    /* Evasive No button styles (no CSS transition — JS handles smooth motion) */
     #noBtn {
       position: relative;
-      transition: transform 0.12s ease;
       will-change: transform;
       touch-action: none;
     }
@@ -121,50 +120,103 @@
         hint.textContent = 'You can try again 😉';
       });
 
-      /* Evasive No button logic */
-      const THRESHOLD = 120; // px
-      const STRENGTH = 1.5;
-      const MAX_MOVE = 220;
+      /* ---------- Smooth persistent dodge with timeout reset ---------- */
+      const THRESHOLD = 120;   // px to trigger dodge
+      const STRENGTH  = 1.5;   // push strength
+      const MAX_MOVE  = 220;   // clamp displacement (px)
+      const SMOOTH    = 0.16;  // lerp speed (0..1)
+      const RESET_MS  = 8000;  // ms of inactivity before returning to center
+
+      let currentX = 0, currentY = 0;
+      let targetX = 0, targetY = 0;
+      let resetTimer = null;
 
       function isNarrow() {
         return window.innerWidth <= 420;
       }
 
-      function handlePointerMove(e) {
+      function clampTarget(tx, ty) {
+        const parentRect = zone.getBoundingClientRect();
+        const btnRect = noBtn.getBoundingClientRect();
+        const minCx = parentRect.left + btnRect.width/2;
+        const maxCx = parentRect.right - btnRect.width/2;
+        const minCy = parentRect.top + btnRect.height/2;
+        const maxCy = parentRect.bottom - btnRect.height/2;
+
+        const curCenterX = (btnRect.left + btnRect.width/2) + tx;
+        const curCenterY = (btnRect.top + btnRect.height/2) + ty;
+
+        let clampedTx = tx;
+        let clampedTy = ty;
+
+        if (curCenterX < minCx) clampedTx += (minCx - curCenterX);
+        if (curCenterX > maxCx) clampedTx -= (curCenterX - maxCx);
+        if (curCenterY < minCy) clampedTy += (minCy - curCenterY);
+        if (curCenterY > maxCy) clampedTy -= (curCenterY - maxCy);
+
+        clampedTx = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, clampedTx));
+        clampedTy = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, clampedTy));
+
+        return [clampedTx, clampedTy];
+      }
+
+      function updateTargetFromPointer(px, py) {
         if (isNarrow()) return;
-        const px = e.clientX;
-        const py = e.clientY;
-        const rect = noBtn.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+
+        const btnRect = noBtn.getBoundingClientRect();
+        const cx = btnRect.left + btnRect.width/2;
+        const cy = btnRect.top + btnRect.height/2;
         let dx = cx - px;
         let dy = cy - py;
         let dist = Math.hypot(dx, dy);
         if (dist < 1) dist = 1;
+
         if (dist < THRESHOLD) {
           const pushAmount = (THRESHOLD - dist) * STRENGTH;
           let nx = (dx / dist) * pushAmount;
           let ny = (dy / dist) * pushAmount;
-          nx = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, nx));
-          ny = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, ny));
-          noBtn.style.transform = `translate(${nx}px, ${ny}px)`;
-        } else {
-          noBtn.style.transform = '';
+
+          // accumulate displacement so button "stays put"
+          let newTargetX = targetX + nx;
+          let newTargetY = targetY + ny;
+
+          [newTargetX, newTargetY] = clampTarget(newTargetX, newTargetY);
+
+          targetX = newTargetX;
+          targetY = newTargetY;
+
+          // restart reset timer on interaction
+          if (resetTimer) clearTimeout(resetTimer);
+          resetTimer = setTimeout(() => {
+            targetX = 0;
+            targetY = 0;
+            resetTimer = null;
+          }, RESET_MS);
         }
       }
 
-      function handlePointerLeave() { noBtn.style.transform = ''; }
+      function animationLoop() {
+        // smooth approach to persistent target
+        currentX += (targetX - currentX) * SMOOTH;
+        currentY += (targetY - currentY) * SMOOTH;
+        noBtn.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        requestAnimationFrame(animationLoop);
+      }
 
-      zone.addEventListener('pointermove', handlePointerMove, { passive: true });
-      zone.addEventListener('pointerleave', handlePointerLeave);
-
-      zone.addEventListener('touchmove', (ev) => {
-        if (isNarrow()) return;
-        const t = ev.touches && ev.touches[0];
-        if (!t) return;
-        handlePointerMove({ clientX: t.clientX, clientY: t.clientY });
+      zone.addEventListener('pointermove', (e) => {
+        updateTargetFromPointer(e.clientX, e.clientY);
       }, { passive: true });
 
+      zone.addEventListener('touchmove', (ev) => {
+        const t = ev.touches && ev.touches[0];
+        if (!t) return;
+        updateTargetFromPointer(t.clientX, t.clientY);
+      }, { passive: true });
+
+      // start smooth loop
+      requestAnimationFrame(animationLoop);
+
+      // keyboard accessibility: keep No reachable
       noBtn.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') noBtn.click();
       });
