@@ -14,12 +14,18 @@
     .hint { color:#6b7280; margin-top:12px; }
     .result { display:none; margin-top:14px; padding:12px; border-radius:8px; background:linear-gradient(180deg,#fffbe6,#fff3f6); }
     #confettiCanvas { position:fixed; inset:0; pointer-events:none; z-index:9999; }
+    .gif-wrap { margin: 12px 0; }
+    .gif-wrap img { max-width:220px; width:100%; height:auto; display:block; margin:0 auto; border-radius:8px; }
   </style>
 </head>
 <body>
   <canvas id="confettiCanvas"></canvas>
   <main class="card" role="main" aria-live="polite">
     <h1>my love, will you be my valentine?</h1>
+
+    <div class="gif-wrap" aria-hidden="false">
+      <img src="https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif" alt="Cute cat with hearts" />
+    </div>
 
     <section class="zone" id="zone">
       <button id="yesBtn" aria-label="Yes">Yes</button>
